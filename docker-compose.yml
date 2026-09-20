@@ -1,0 +1,92 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: employee_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: employee_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d employee_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - employee_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: employee_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - employee_network
+
+  api:
+    build:
+      context: .
+      target: production
+    container_name: employee_api
+    restart: unless-stopped
+    command: sh -c "node db/setup.js && node server.js"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/employee_db
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      CACHE_TTL: ${CACHE_TTL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - employee_network
+
+  worker:
+    build:
+      context: .
+      target: production
+    container_name: employee_worker
+    restart: unless-stopped
+    command: node workers/employeeWorker.js
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/employee_db
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      CACHE_TTL: ${CACHE_TTL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - employee_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  employee_network:
+    driver: bridge
