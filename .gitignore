@@ -8,3 +8,5 @@ coverage/
 .claude/
 .cursor/
 .devin/
+
+/generated/prisma
