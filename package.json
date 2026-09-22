@@ -16,6 +16,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.79.2",
     "dotenv": "^17.4.2",
@@ -24,6 +25,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
+    "prisma": "^5.22.0",
     "redis": "^6.0.0",
     "winston": "^3.19.0",
     "zod": "^4.4.3"
@@ -31,8 +33,7 @@
   "devDependencies": {
     "@jest/globals": "^30.4.1",
     "jest": "^30.4.2",
-    "supertest": "^7.2.2",
-    "prisma": "8.0.0-rc.15"
+    "supertest": "^7.2.2"
   },
   "jest": {
     "testEnvironment": "node",
