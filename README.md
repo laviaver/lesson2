@@ -23,7 +23,7 @@ npm run db:setup
 npm start
 ```
 
-The API listens on `http://localhost:3000`.
+The API listens on `http://localhost:3000`. Docker Postgres is published on host port **5433** so a local Postgres on 5432 can keep running. Inside Compose, the database still listens on 5432.
 
 If `npm run db:setup` fails, wait a few seconds for Postgres to finish starting, then run it again.
 
