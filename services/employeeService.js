@@ -1,29 +1,49 @@
-const Employee = require("../models/Employee");
-const { invalidateEmployeeCache } = require("./cacheService");
-const { employeeQueue } = require("../config/queue");
+const prisma = require("../config/prisma");
+const { NotFoundError } = require("../errors");
 
-const ALLOWED_SORT_FIELDS = new Set(["name", "department", "createdAt"]);
-
-function parseSort(sort) {
-  if (!sort) return { field: "createdAt", direction: -1 };
-
-  const field = sort.startsWith("-") ? sort.substring(1) : sort;
-  const direction = sort.startsWith("-") ? -1 : 1;
-
-  if (!ALLOWED_SORT_FIELDS.has(field)) {
-    return { field: "createdAt", direction: -1 };
-  }
-
-  return { field, direction };
-}
-
+// GET ALL EMPLOYEES
 async function getAllEmployees(page = 1, limit = 10, filters = {}) {
   const skip = (page - 1) * limit;
-  const sortOption = parseSort(filters.sort);
 
+  const where = {};
+
+  // Filter by department name
+  if (filters.department) {
+    where.department = {
+      name: { equals: filters.department, mode: "insensitive" },
+    };
+  }
+
+  // Search across name and department name
+  if (filters.search) {
+    where.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { department: { name: { contains: filters.search, mode: "insensitive" } } },
+    ];
+  }
+
+  // Sorting
+  const allowedSortFields = ["name", "createdAt"];
+  let orderBy = { createdAt: "desc" };
+
+  if (filters.sort) {
+    const field = filters.sort.startsWith("-") ? filters.sort.substring(1) : filters.sort;
+    const direction = filters.sort.startsWith("-") ? "desc" : "asc";
+    if (allowedSortFields.includes(field)) {
+      orderBy = { [field]: direction };
+    }
+  }
+
+  // Parallel queries
   const [employees, total] = await Promise.all([
-    Employee.findAll({ filters, sortOption, skip, limit }),
-    Employee.count(filters),
+    prisma.employee.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: { department: true },
+    }),
+    prisma.employee.count({ where }),
   ]);
 
   return {
@@ -35,46 +55,58 @@ async function getAllEmployees(page = 1, limit = 10, filters = {}) {
   };
 }
 
+// GET EMPLOYEE BY ID
 async function getEmployeeById(id) {
-  return await Employee.findById(id);
-}
-
-async function createEmployee(name, department) {
-  const saved = await Employee.create({ name, department });
-  await invalidateEmployeeCache();
-
-  await employeeQueue.add("send-welcome-email", {
-    name: saved.name,
-    department: saved.department,
-    employeeId: saved.id,
+  return await prisma.employee.findUnique({
+    where: { id },
+    include: { department: true },
   });
-
-  return saved;
 }
 
-async function deleteEmployeeById(id) {
-  const result = await Employee.deleteById(id);
-  if (result) {
-    await invalidateEmployeeCache();
-    await employeeQueue.add("log-employee-deleted", {
-      employeeId: result.id,
-      name: result.name,
-      department: result.department,
+// CREATE EMPLOYEE
+async function createEmployee(name, departmentId) {
+  try {
+    return await prisma.employee.create({
+      data: { name, departmentId },
+      include: { department: true },
     });
+  } catch (err) {
+    if (err.code === "P2003") {
+      throw new NotFoundError("Department not found");
+    }
+    throw err;
   }
-  return result;
 }
 
+// UPDATE EMPLOYEE
 async function updateEmployeeById(id, updates) {
-  const updated = await Employee.updateById(id, updates);
-  if (updated) await invalidateEmployeeCache();
-  return updated;
+  try {
+    return await prisma.employee.update({
+      where: { id },
+      data: updates,
+      include: { department: true },
+    });
+  } catch (err) {
+    if (err.code === "P2025") throw new NotFoundError("Employee not found");
+    if (err.code === "P2003") throw new NotFoundError("Department not found");
+    throw err;
+  }
+}
+
+// DELETE EMPLOYEE
+async function deleteEmployeeById(id) {
+  try {
+    return await prisma.employee.delete({ where: { id } });
+  } catch (err) {
+    if (err.code === "P2025") throw new NotFoundError("Employee not found");
+    throw err;
+  }
 }
 
 module.exports = {
   getAllEmployees,
   getEmployeeById,
   createEmployee,
-  deleteEmployeeById,
   updateEmployeeById,
+  deleteEmployeeById,
 };
