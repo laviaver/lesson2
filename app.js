@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const { apiLimiter } = require("./middleware/rateLimiter");
 const requestLogger = require("./middleware/requestLogger");
 const employeesRoutes = require("./routes/employees");
+const departmentRoutes = require("./routes/departmentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const errorHandler = require("./middleware/errorHandler");
@@ -18,6 +19,7 @@ app.get("/", (req, res) => res.send("Server is running"));
 app.use("/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/employees", employeesRoutes);
+app.use("/api/v1/departments", departmentRoutes);
 
 app.use(errorHandler);
 
