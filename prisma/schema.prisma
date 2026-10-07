@@ -20,6 +20,7 @@ model Department {
 model Employee {
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String
+  email        String?    @unique  // ← new field, optional
   departmentId String     @map("department_id") @db.Uuid
   department   Department @relation(fields: [departmentId], references: [id])
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
