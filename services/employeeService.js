@@ -65,17 +65,22 @@ async function getEmployeeById(id) {
 
 // CREATE EMPLOYEE
 async function createEmployee(name, departmentId) {
-  try {
-    return await prisma.employee.create({
+  return await prisma.$transaction(async (tx) => {
+    // Verify department exists first
+    const department = await tx.department.findUnique({
+      where: { id: departmentId },
+    });
+
+    if (!department) {
+      throw new NotFoundError("Department not found");
+    }
+
+    // Create employee only if department exists
+    return await tx.employee.create({
       data: { name, departmentId },
       include: { department: true },
     });
-  } catch (err) {
-    if (err.code === "P2003") {
-      throw new NotFoundError("Department not found");
-    }
-    throw err;
-  }
+  });
 }
 
 // UPDATE EMPLOYEE
