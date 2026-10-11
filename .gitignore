@@ -8,4 +8,5 @@ coverage/
 .claude/
 .cursor/
 .devin/
-prisma.config.ts
+
+/generated/prisma

@@ -7,15 +7,10 @@ const registerSchema = z.object({
     .max(30, "Username cannot exceed 30 characters")
     .trim()
     .toLowerCase(),
-
   password: z
     .string({ required_error: "Password is required" })
     .min(6, "Password must be at least 6 characters"),
-
-  role: z
-    .enum(["user", "admin"])
-    .optional()
-    .default("user"),
+  role: z.enum(["user", "admin"]).optional().default("user"),
 });
 
 const loginSchema = z.object({
@@ -23,9 +18,7 @@ const loginSchema = z.object({
     .string({ required_error: "Username is required" })
     .trim()
     .toLowerCase(),
-
-  password: z
-    .string({ required_error: "Password is required" }),
+  password: z.string({ required_error: "Password is required" }),
 });
 
 module.exports = { registerSchema, loginSchema };

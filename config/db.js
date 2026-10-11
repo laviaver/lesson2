@@ -11,7 +11,7 @@ function getPool() {
     pool = new Pool({
       connectionString:
         process.env.DATABASE_URL ||
-        "postgres://postgres:postgres@127.0.0.1:5432/employee_db",
+        "postgres://postgres:postgres@127.0.0.1:5433/employee_db",
     });
   }
   return pool;

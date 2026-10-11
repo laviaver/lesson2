@@ -6,7 +6,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 async function setup() {
   const connectionString =
     process.env.DATABASE_URL ||
-    "postgres://postgres:postgres@127.0.0.1:5432/employee_db";
+    "postgres://postgres:postgres@127.0.0.1:5433/employee_db";
 
   const client = new Client({ connectionString });
   await client.connect();

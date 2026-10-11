@@ -1,27 +1,26 @@
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const prisma = require("../config/prisma");
 const { ConflictError, UnauthorizedError } = require("../errors");
 
 async function register(username, password, role) {
-  const existingUser = await User.findOneByUsername(username);
+  const existingUser = await prisma.user.findUnique({ where: { username } });
   if (existingUser) throw new ConflictError("Username already taken");
 
-  let user;
-  try {
-    user = await User.create({ username, password, role });
-  } catch (err) {
-    if (err.isUniqueViolation) throw new ConflictError("Username already taken");
-    throw err;
-  }
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const user = await prisma.user.create({
+    data: { username, password: hashedPassword, role },
+  });
 
   return { id: user.id, username: user.username, role: user.role };
 }
 
 async function login(username, password) {
-  const user = await User.findOneByUsername(username);
+  const user = await prisma.user.findUnique({ where: { username } });
   if (!user) throw new UnauthorizedError("Invalid credentials");
 
-  const isValid = await user.comparePassword(password);
+  const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) throw new UnauthorizedError("Invalid credentials");
 
   const token = jwt.sign(
