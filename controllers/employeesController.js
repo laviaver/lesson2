@@ -3,13 +3,13 @@ const asyncHandler = require("../middleware/asyncHandler");
 const { NotFoundError } = require("../errors");
 
 const getAllEmployees = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, department, search, sort } = req.query;
+  const { page, limit, department, search, sort } = req.query;
 
-  const result = await employeeService.getAllEmployees(
-    parseInt(page),
-    parseInt(limit),
-    { department, search, sort }
-  );
+  const result = await employeeService.getAllEmployees(page, limit, {
+    department,
+    search,
+    sort,
+  });
 
   res.json(result);
 });

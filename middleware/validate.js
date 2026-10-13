@@ -1,25 +1,27 @@
-function validate(schema) {
-    return (req, res, next) => {
-      const result = schema.safeParse(req.body);
-  
-      if (!result.success) {
-        // Collect ALL errors at once, not just the first one
-        const errors = result.error.issues.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        }));
-  
-        return res.status(400).json({
-          error: "Validation failed",
-          details: errors,
-        });
-      }
-  
-      // Replace req.body with the validated + transformed data
-      // (trimming has already been applied by Zod)
+function validate(schema, source = "body") {
+  return (req, res, next) => {
+    const input = source === "query" ? req.query : req.body;
+    const result = schema.safeParse(input);
+
+    if (!result.success) {
+      const errors = result.error.issues.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+
+      return res.status(400).json({
+        error: "Validation failed",
+        details: errors,
+      });
+    }
+
+    if (source === "query") {
+      req.query = result.data;
+    } else {
       req.body = result.data;
-      next();
-    };
-  }
-  
-  module.exports = validate;
+    }
+    next();
+  };
+}
+
+module.exports = validate;

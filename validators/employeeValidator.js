@@ -29,4 +29,16 @@ const updateEmployeeSchema = z
     { message: "At least one field (name or departmentId) must be provided" }
   );
 
-module.exports = { createEmployeeSchema, updateEmployeeSchema };
+const listEmployeesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+  department: z.string().trim().optional(),
+  search: z.string().trim().optional(),
+  sort: z.string().trim().optional(),
+});
+
+module.exports = {
+  createEmployeeSchema,
+  updateEmployeeSchema,
+  listEmployeesQuerySchema,
+};
