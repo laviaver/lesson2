@@ -16,7 +16,7 @@ function validate(schema, source = "body") {
     }
 
     if (source === "query") {
-      req.query = result.data;
+      req.validatedQuery = result.data;
     } else {
       req.body = result.data;
     }

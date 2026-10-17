@@ -1,11 +1,19 @@
-jest.mock("../../config/prisma", () => ({
-  employee: {
-    findMany: jest.fn(),
-    count: jest.fn(),
-    create: jest.fn(),
-    delete: jest.fn(),
-  },
-}));
+jest.mock("../../config/prisma", () => {
+  const mock = {
+    employee: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    department: {
+      findUnique: jest.fn(),
+    },
+  };
+  // Run the transaction callback with the same mock acting as "tx"
+  mock.$transaction = jest.fn((callback) => callback(mock));
+  return mock;
+});
 
 const prisma = require("../../config/prisma");
 const employeeService = require("../../services/employeeService");
@@ -68,10 +76,12 @@ describe("employeeService", () => {
         departmentId: "dept-1",
         department: { name: "HR" },
       };
+      prisma.department.findUnique.mockResolvedValue({ id: "dept-1", name: "HR" });
       prisma.employee.create.mockResolvedValue(mockSaved);
 
       const result = await employeeService.createEmployee("Alice", "dept-1");
 
+      expect(prisma.department.findUnique).toHaveBeenCalledWith({ where: { id: "dept-1" } });
       expect(prisma.employee.create).toHaveBeenCalledWith({
         data: { name: "Alice", departmentId: "dept-1" },
         include: { department: true },
@@ -80,11 +90,12 @@ describe("employeeService", () => {
     });
 
     test("throws when the department does not exist", async () => {
-      prisma.employee.create.mockRejectedValue({ code: "P2003" });
+      prisma.department.findUnique.mockResolvedValue(null);
 
       await expect(
         employeeService.createEmployee("Alice", "missing")
       ).rejects.toBeInstanceOf(NotFoundError);
+      expect(prisma.employee.create).not.toHaveBeenCalled();
     });
   });
 

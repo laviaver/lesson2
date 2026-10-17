@@ -3,7 +3,7 @@ const asyncHandler = require("../middleware/asyncHandler");
 const { NotFoundError } = require("../errors");
 
 const getAllEmployees = asyncHandler(async (req, res) => {
-  const { page, limit, department, search, sort } = req.query;
+  const { page, limit, department, search, sort } = req.validatedQuery;
 
   const result = await employeeService.getAllEmployees(page, limit, {
     department,

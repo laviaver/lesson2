@@ -2,7 +2,7 @@ const { z } = require("zod");
 
 const createDepartmentSchema = z.object({
   name: z
-    .string({ required_error: "Department name is required" })
+    .string({ error: "Department name is required" })
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name cannot exceed 100 characters")
     .trim(),

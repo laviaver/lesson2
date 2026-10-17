@@ -29,11 +29,19 @@ If `npm run db:setup` fails, wait a few seconds for Postgres to finish starting,
 
 ### Tests
 
-Create a separate test database, then run Jest:
+Tests run against a separate database: the name from `DATABASE_URL` with `_test` added (`employee_db_test`), or `TEST_DATABASE_URL` if set. Tests refuse to run against any database whose name does not end in `_test`, because they delete data.
+
+One-time setup — create the test database and apply the Prisma migrations to it:
 
 ```cmd
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE employee_api_test;"
+docker compose exec postgres psql -U postgres -c "CREATE DATABASE employee_db_test;"
+npm run db:test:migrate
+```
+
+Then run Jest:
+
+```cmd
 npm test
 ```
 
-Unit tests do not need Postgres. Integration tests need Postgres (and Redis for create/delete cache/queue side effects).
+Run `npm run db:test:migrate` again after adding a new migration. Unit tests do not need Postgres; integration tests do.
