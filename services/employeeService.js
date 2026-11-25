@@ -108,8 +108,30 @@ async function deleteEmployeeById(id) {
   }
 }
 
+// STREAM ALL EMPLOYEES (for export)
+// Async generator: reads in batches (keyset on id) but hands out one employee at a time,
+// so only one batch is ever held in memory
+async function* streamAllEmployees(batchSize = 1000) {
+  let lastId = null;
+
+  while (true) {
+    const batch = await prisma.employee.findMany({
+      where: lastId ? { id: { gt: lastId } } : {},
+      orderBy: { id: "asc" },
+      take: batchSize,
+      include: { department: { select: { name: true } } },
+    });
+
+    if (batch.length === 0) return;
+
+    lastId = batch[batch.length - 1].id;
+    yield* batch;
+  }
+}
+
 module.exports = {
   getAllEmployees,
+  streamAllEmployees,
   getEmployeeById,
   createEmployee,
   updateEmployeeById,
