@@ -3,6 +3,7 @@ const request = require("supertest");
 const app = require("../../app");
 const prisma = require("../../config/prisma");
 const authService = require("../../services/authService");
+const employeeService = require("../../services/employeeService");
 
 let adminToken;
 let userToken;
@@ -203,5 +204,75 @@ describe("DELETE /api/v1/employees/:id", () => {
 
     const deleted = await prisma.employee.findUnique({ where: { id: employee.id } });
     expect(deleted).toBeNull();
+  });
+});
+
+describe("GET /api/v1/employees/export", () => {
+  // Collect the streamed NDJSON body as one string
+  function collectText(res, callback) {
+    let text = "";
+    res.setEncoding("utf8");
+    res.on("data", (chunk) => (text += chunk));
+    res.on("end", () => callback(null, text));
+  }
+
+  function exportAs(token) {
+    return request(app)
+      .get("/api/v1/employees/export")
+      .set("Authorization", `Bearer ${token}`)
+      .buffer(true)
+      .parse(collectText);
+  }
+
+  test("returns 401 without a token", async () => {
+    const res = await request(app).get("/api/v1/employees/export");
+    expect(res.status).toBe(401);
+  });
+
+  test("returns 403 for non-admin user", async () => {
+    const res = await request(app)
+      .get("/api/v1/employees/export")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  test("streams one JSON line per employee as admin", async () => {
+    await seedTwoEmployees();
+
+    const res = await exportAs(adminToken);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/x-ndjson");
+    expect(res.headers["content-disposition"]).toContain("employees.ndjson");
+
+    const lines = res.body.trim().split("\n").map((line) => JSON.parse(line));
+    expect(lines).toHaveLength(2);
+    expect(lines.map((e) => e.name).sort()).toEqual(["Alice", "Bob"]);
+    expect(lines.map((e) => e.department.name).sort()).toEqual(["Engineering", "HR"]);
+  });
+
+  test("returns an empty file when there are no employees", async () => {
+    const res = await exportAs(adminToken);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toBe("");
+  });
+
+  // Regression: a DB failure before the first row used to drop the connection with no response
+  test("returns a JSON 500 when the database fails before the first row", async () => {
+    const spy = jest
+      .spyOn(employeeService, "streamAllEmployees")
+      .mockImplementation(async function* () {
+        throw new Error("Can't reach database server");
+      });
+
+    const res = await request(app)
+      .get("/api/v1/employees/export")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: "Something went wrong. Please try again later." });
   });
 });

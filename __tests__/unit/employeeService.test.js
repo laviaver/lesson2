@@ -118,4 +118,24 @@ describe("employeeService", () => {
       ).rejects.toBeInstanceOf(NotFoundError);
     });
   });
+
+  describe("streamAllEmployees", () => {
+    test("reads batch after batch using the last id, and stops on an empty batch", async () => {
+      prisma.employee.findMany
+        .mockResolvedValueOnce([{ id: "a" }, { id: "b" }])
+        .mockResolvedValueOnce([{ id: "c" }])
+        .mockResolvedValueOnce([]);
+
+      const ids = [];
+      for await (const employee of employeeService.streamAllEmployees(2)) {
+        ids.push(employee.id);
+      }
+
+      expect(ids).toEqual(["a", "b", "c"]);
+      expect(prisma.employee.findMany).toHaveBeenCalledTimes(3);
+      expect(prisma.employee.findMany.mock.calls[0][0].where).toEqual({});
+      expect(prisma.employee.findMany.mock.calls[1][0].where).toEqual({ id: { gt: "b" } });
+      expect(prisma.employee.findMany.mock.calls[2][0].where).toEqual({ id: { gt: "c" } });
+    });
+  });
 });

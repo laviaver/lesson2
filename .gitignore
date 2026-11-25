@@ -8,5 +8,9 @@ coverage/
 .claude/
 .cursor/
 .devin/
+.ndjson
 
 /generated/prisma
+
+# Exported data files
+*.ndjson
